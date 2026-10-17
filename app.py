@@ -716,6 +716,10 @@ with aba3:
     ].copy()
 
 
+    # --------------------------------------------------------
+    # GRÁFICO
+    # --------------------------------------------------------
+
     fig_municipio = go.Figure()
 
     fig_municipio.add_trace(
@@ -723,7 +727,12 @@ with aba3:
             x=hist_municipio["ANO"],
             y=hist_municipio["OBITOS"],
             mode="lines+markers",
-            name="Histórico"
+            name="Histórico",
+            hovertemplate=(
+                "Ano: %{x}<br>"
+                "Óbitos históricos: %{y:.0f}"
+                "<extra></extra>"
+            )
         )
     )
 
@@ -737,7 +746,12 @@ with aba3:
             line={
                 "dash": "dash"
             },
-            name="Projeção"
+            name="Projeção",
+            hovertemplate=(
+                "Ano: %{x}<br>"
+                "Óbitos previstos: %{y:.0f}"
+                "<extra></extra>"
+            )
         )
     )
 
@@ -811,7 +825,7 @@ with aba3:
 
 
     # --------------------------------------------------------
-    # Arredondar só a exibição
+    # Arredondar somente a exibição
     # --------------------------------------------------------
 
     ranking_municipal[
@@ -865,7 +879,6 @@ with aba3:
         "Os valores originais produzidos pelo modelo "
         "permanecem preservados na base de dados."
     )
-
 
 # ============================================================
 # ABA 4 - MODELOS
