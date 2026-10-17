@@ -718,28 +718,38 @@ with aba3:
 
     fig_municipio = go.Figure()
 
-    fig_municipio.add_trace(
-        go.Scatter(
-            x=hist_municipio["ANO"],
-            y=hist_municipio["OBITOS"],
-            mode="lines+markers",
-            name="Histórico"
+   fig_municipio.add_trace(
+    go.Scatter(
+        x=hist_municipio["ANO"],
+        y=hist_municipio["OBITOS"],
+        mode="lines+markers",
+        name="Histórico",
+        hovertemplate=(
+            "Ano: %{x}<br>"
+            "Óbitos históricos: %{y:.0f}"
+            "<extra></extra>"
         )
     )
+)
 
     fig_municipio.add_trace(
-        go.Scatter(
-            x=proj_municipio["ANO"],
-            y=proj_municipio[
-                "OBITOS_PREVISTOS"
-            ],
-            mode="lines+markers",
-            line={
-                "dash": "dash"
-            },
-            name="Projeção"
+    go.Scatter(
+        x=proj_municipio["ANO"],
+        y=proj_municipio[
+            "OBITOS_PREVISTOS"
+        ],
+        mode="lines+markers",
+        line={
+            "dash": "dash"
+        },
+        name="Projeção",
+        hovertemplate=(
+            "Ano: %{x}<br>"
+            "Óbitos previstos: %{y:.0f}"
+            "<extra></extra>"
         )
     )
+)
 
     fig_municipio.update_layout(
         title=(
