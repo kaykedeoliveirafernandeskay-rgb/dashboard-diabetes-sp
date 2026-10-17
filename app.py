@@ -107,6 +107,41 @@ def carregar_dados():
     metricas
 ) = carregar_dados()
 
+# ============================================================
+# NOMES DOS MUNICÍPIOS - IBGE
+# ============================================================
+
+@st.cache_data
+def carregar_municipios_ibge():
+
+    url = (
+        "https://servicodados.ibge.gov.br/api/v1/"
+        "localidades/estados/SP/municipios"
+    )
+
+    try:
+
+        dados = pd.read_json(url)
+
+        mapa = {}
+
+        for _, linha in dados.iterrows():
+
+            codigo_7 = str(linha["id"])
+
+            # Nossa base usa os 6 primeiros dígitos
+            codigo_6 = codigo_7[:6]
+
+            mapa[codigo_6] = linha["nome"]
+
+        return mapa
+
+    except Exception:
+
+        return {}
+
+
+mapa_municipios = carregar_municipios_ibge()
 
 # ============================================================
 # PADRONIZAÇÃO
@@ -605,17 +640,68 @@ with aba3:
         "Análise por município"
     )
 
-    lista_municipios = sorted(
+    lista_codigos = sorted(
         historico_municipal[
             "CODMUNRES"
         ].unique()
     )
 
-    municipio = st.selectbox(
-        "Selecione o código do município",
-        lista_municipios
+
+    # --------------------------------------------------------
+    # Nome do município + código
+    # --------------------------------------------------------
+
+    opcoes_municipios = {}
+
+    for codigo in lista_codigos:
+
+        nome = mapa_municipios.get(
+            codigo,
+            "Município"
+        )
+
+        texto = f"{nome} — {codigo}"
+
+        opcoes_municipios[
+            texto
+        ] = codigo
+
+
+    lista_exibicao = sorted(
+        opcoes_municipios.keys()
     )
 
+
+    municipio_exibicao = st.selectbox(
+        "Selecione o município",
+        lista_exibicao
+    )
+
+
+    municipio = (
+        opcoes_municipios[
+            municipio_exibicao
+        ]
+    )
+
+
+    nome_municipio = (
+        mapa_municipios.get(
+            municipio,
+            "Município não identificado"
+        )
+    )
+
+
+    st.caption(
+        f"Município selecionado: "
+        f"**{nome_municipio} — {municipio}**"
+    )
+
+
+    # --------------------------------------------------------
+    # HISTÓRICO E PROJEÇÕES DO MUNICÍPIO
+    # --------------------------------------------------------
 
     hist_municipio = historico_municipal[
         historico_municipal[
@@ -656,6 +742,10 @@ with aba3:
     )
 
     fig_municipio.update_layout(
+        title=(
+            f"Histórico e projeção — "
+            f"{nome_municipio}"
+        ),
         xaxis_title="Ano",
         yaxis_title="Óbitos",
         hovermode="x unified"
@@ -686,6 +776,7 @@ with aba3:
         ]
     )
 
+
     ranking_municipal = (
         projecoes_municipais[
             projecoes_municipais[
@@ -699,20 +790,57 @@ with aba3:
         .copy()
     )
 
+
+    # --------------------------------------------------------
+    # Adicionar nome do município
+    # --------------------------------------------------------
+
+    ranking_municipal[
+        "MUNICIPIO"
+    ] = (
+        ranking_municipal[
+            "CODMUNRES"
+        ]
+        .map(
+            mapa_municipios
+        )
+        .fillna(
+            "Município não identificado"
+        )
+    )
+
+
+    # --------------------------------------------------------
+    # Arredondar só a exibição
+    # --------------------------------------------------------
+
     ranking_municipal[
         "OBITOS_PREVISTOS"
     ] = (
         ranking_municipal[
             "OBITOS_PREVISTOS"
         ]
-        .round(2)
+        .round(0)
+        .astype(int)
     )
 
+
     ranking_municipal = (
-        ranking_municipal.rename(
+        ranking_municipal[
+            [
+                "ANO",
+                "MUNICIPIO",
+                "CODMUNRES",
+                "OBITOS_PREVISTOS"
+            ]
+        ]
+        .rename(
             columns={
                 "ANO":
                     "Ano",
+
+                "MUNICIPIO":
+                    "Município",
 
                 "CODMUNRES":
                     "Código do município",
@@ -723,10 +851,19 @@ with aba3:
         )
     )
 
+
     st.dataframe(
         ranking_municipal,
         use_container_width=True,
         hide_index=True
+    )
+
+
+    st.caption(
+        "Os valores municipais previstos são exibidos "
+        "arredondados para o número inteiro mais próximo. "
+        "Os valores originais produzidos pelo modelo "
+        "permanecem preservados na base de dados."
     )
 
 
