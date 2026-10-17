@@ -861,7 +861,6 @@ with aba3:
         )
     )
 
-
     st.dataframe(
         ranking_municipal,
         use_container_width=True,
