@@ -890,6 +890,28 @@ with aba4:
         "Comparação dos modelos"
     )
 
+    # --------------------------------------------------------
+    # Padronizar nomes dos modelos apenas para exibição
+    # --------------------------------------------------------
+
+    metricas_dashboard = metricas.copy()
+
+    metricas_dashboard["MODELO"] = (
+        metricas_dashboard["MODELO"]
+        .replace({
+            "Regressão Linear Temporal":
+                "Regressão Linear Múltipla",
+
+            "Random Forest Ajustado":
+                "Random Forest Regressor ajustado"
+        })
+    )
+
+
+    # --------------------------------------------------------
+    # TEXTO EXPLICATIVO
+    # --------------------------------------------------------
+
     st.markdown(
         """
         Foram comparados dois modelos de regressão:
@@ -903,7 +925,13 @@ with aba4:
     )
 
 
-    metricas_exibir = metricas.copy()
+    # --------------------------------------------------------
+    # TABELA DE MÉTRICAS
+    # --------------------------------------------------------
+
+    metricas_exibir = (
+        metricas_dashboard.copy()
+    )
 
     metricas_exibir[
         "MAE"
@@ -923,14 +951,16 @@ with aba4:
         "R2"
     ].round(4)
 
-    metricas_exibir = metricas_exibir.rename(
-        columns={
-            "MODELO":
-                "Modelo",
+    metricas_exibir = (
+        metricas_exibir.rename(
+            columns={
+                "MODELO":
+                    "Modelo",
 
-            "R2":
-                "R²"
-        }
+                "R2":
+                    "R²"
+            }
+        )
     )
 
     st.dataframe(
@@ -945,7 +975,7 @@ with aba4:
     # --------------------------------------------------------
 
     fig_r2 = px.bar(
-        metricas,
+        metricas_dashboard,
         x="MODELO",
         y="R2",
         labels={
@@ -966,10 +996,10 @@ with aba4:
 
 
     # --------------------------------------------------------
-    # GRÁFICO DE ERROS
+    # GRÁFICO DE MAE E RMSE
     # --------------------------------------------------------
 
-    erros = metricas.melt(
+    erros = metricas_dashboard.melt(
         id_vars=[
             "MODELO"
         ],
@@ -1000,19 +1030,27 @@ with aba4:
     )
 
 
+    # --------------------------------------------------------
+    # MODELO SELECIONADO
+    # --------------------------------------------------------
+
     melhor_modelo = (
-        metricas
+        metricas_dashboard
         .sort_values(
             "RMSE"
         )
         .iloc[0]
     )
 
-
     st.success(
         "Modelo selecionado para as projeções: "
         f"{melhor_modelo['MODELO']}."
     )
+
+
+    # --------------------------------------------------------
+    # EXPLICAÇÃO DAS MÉTRICAS
+    # --------------------------------------------------------
 
     st.markdown(
         """
@@ -1029,17 +1067,3 @@ with aba4:
         avaliado.
         """
     )
-
-
-# ============================================================
-# RODAPÉ
-# ============================================================
-
-st.divider()
-
-st.caption(
-    "Trabalho acadêmico desenvolvido com dados públicos "
-    "do Sistema de Informações sobre Mortalidade (SIM/DATASUS). "
-    "As projeções representam estimativas produzidas pelo "
-    "modelo e não valores observados."
-)
