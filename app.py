@@ -894,7 +894,7 @@ with aba4:
         """
         Foram comparados dois modelos de regressão:
 
-        - **Regressão Linear Temporal**
+        - **Regressão Linear Múltipla**
         - **Random Forest Regressor ajustado**
 
         A avaliação foi realizada em um teste temporal
