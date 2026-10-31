@@ -112,36 +112,27 @@ def carregar_dados():
 # ============================================================
 
 @st.cache_data
-def carregar_municipios_ibge():
-
-    url = (
-        "https://servicodados.ibge.gov.br/api/v1/"
-        "localidades/estados/SP/municipios"
+def carregar_municipios_local():
+    municipios = pd.read_csv(
+        "municipios_sp.csv",
+        dtype={
+            "CODMUNRES": str
+        }
     )
 
-    try:
+    municipios["CODMUNRES"] = (
+        municipios["CODMUNRES"]
+        .astype(str)
+        .str.strip()
+        .str.zfill(6)
+    )
 
-        dados = pd.read_json(url)
-
-        mapa = {}
-
-        for _, linha in dados.iterrows():
-
-            codigo_7 = str(linha["id"])
-
-            # Nossa base usa os 6 primeiros dígitos
-            codigo_6 = codigo_7[:6]
-
-            mapa[codigo_6] = linha["nome"]
-
-        return mapa
-
-    except Exception:
-
-        return {}
-
-
-mapa_municipios = carregar_municipios_ibge()
+    return dict(
+        zip(
+            municipios["CODMUNRES"],
+            municipios["MUNICIPIO"]
+        )
+    )
 
 # ============================================================
 # PADRONIZAÇÃO
@@ -629,7 +620,6 @@ with aba2:
         use_container_width=True
     )
 
-
 # ============================================================
 # ABA 3 - MUNICÍPIOS
 # ============================================================
@@ -640,179 +630,63 @@ with aba3:
         "Análise por município"
     )
 
-    lista_codigos = sorted(
-        historico_municipal[
+    # --------------------------------------------------------
+    # PREPARAÇÃO DOS DADOS
+    # --------------------------------------------------------
+
+    historico_municipal_exibir = (
+        historico_municipal.copy()
+    )
+
+    projecoes_municipais_exibir = (
+        projecoes_municipais.copy()
+    )
+
+    # Padronizar códigos municipais
+    historico_municipal_exibir[
+        "CODMUNRES"
+    ] = (
+        historico_municipal_exibir[
             "CODMUNRES"
-        ].unique()
-    )
-
-
-    # --------------------------------------------------------
-    # Nome do município + código
-    # --------------------------------------------------------
-
-    opcoes_municipios = {}
-
-    for codigo in lista_codigos:
-
-        nome = mapa_municipios.get(
-            codigo,
-            "Município"
-        )
-
-        texto = f"{nome} — {codigo}"
-
-        opcoes_municipios[
-            texto
-        ] = codigo
-
-
-    lista_exibicao = sorted(
-        opcoes_municipios.keys()
-    )
-
-
-    municipio_exibicao = st.selectbox(
-        "Selecione o município",
-        lista_exibicao
-    )
-
-
-    municipio = (
-        opcoes_municipios[
-            municipio_exibicao
         ]
-    )
-
-
-    nome_municipio = (
-        mapa_municipios.get(
-            municipio,
-            "Município não identificado"
+        .astype(str)
+        .str.strip()
+        .str.replace(
+            ".0",
+            "",
+            regex=False
         )
+        .str.zfill(6)
     )
 
-
-    st.caption(
-        f"Município selecionado: "
-        f"**{nome_municipio} — {municipio}**"
-    )
-
-
-    # --------------------------------------------------------
-    # HISTÓRICO E PROJEÇÕES DO MUNICÍPIO
-    # --------------------------------------------------------
-
-    hist_municipio = historico_municipal[
-        historico_municipal[
+    projecoes_municipais_exibir[
+        "CODMUNRES"
+    ] = (
+        projecoes_municipais_exibir[
             "CODMUNRES"
-        ] == municipio
-    ].copy()
-
-    proj_municipio = projecoes_municipais[
-        projecoes_municipais[
-            "CODMUNRES"
-        ] == municipio
-    ].copy()
-
-
-    # --------------------------------------------------------
-    # GRÁFICO
-    # --------------------------------------------------------
-
-    fig_municipio = go.Figure()
-
-    fig_municipio.add_trace(
-        go.Scatter(
-            x=hist_municipio["ANO"],
-            y=hist_municipio["OBITOS"],
-            mode="lines+markers",
-            name="Histórico",
-            hovertemplate=(
-                "Ano: %{x}<br>"
-                "Óbitos históricos: %{y:.0f}"
-                "<extra></extra>"
-            )
-        )
-    )
-
-    fig_municipio.add_trace(
-        go.Scatter(
-            x=proj_municipio["ANO"],
-            y=proj_municipio[
-                "OBITOS_PREVISTOS"
-            ],
-            mode="lines+markers",
-            line={
-                "dash": "dash"
-            },
-            name="Projeção",
-            hovertemplate=(
-                "Ano: %{x}<br>"
-                "Óbitos previstos: %{y:.0f}"
-                "<extra></extra>"
-            )
-        )
-    )
-
-    fig_municipio.update_layout(
-        title=(
-            f"Histórico e projeção — "
-            f"{nome_municipio}"
-        ),
-        xaxis_title="Ano",
-        yaxis_title="Óbitos",
-        hovermode="x unified"
-    )
-
-    st.plotly_chart(
-        fig_municipio,
-        use_container_width=True
-    )
-
-
-    # --------------------------------------------------------
-    # PROJEÇÕES MUNICIPAIS
-    # --------------------------------------------------------
-
-    st.subheader(
-        "Projeções municipais"
-    )
-
-    ano_projecao = st.selectbox(
-        "Ano da projeção",
-        [
-            2026,
-            2027,
-            2028,
-            2029,
-            2030
         ]
-    )
-
-
-    ranking_municipal = (
-        projecoes_municipais[
-            projecoes_municipais[
-                "ANO"
-            ] == ano_projecao
-        ]
-        .sort_values(
-            "OBITOS_PREVISTOS",
-            ascending=False
+        .astype(str)
+        .str.strip()
+        .str.replace(
+            ".0",
+            "",
+            regex=False
         )
-        .copy()
+        .str.zfill(6)
     )
 
-
     # --------------------------------------------------------
-    # Adicionar nome do município
+    # CARREGAR NOMES DOS MUNICÍPIOS DO ARQUIVO LOCAL
     # --------------------------------------------------------
 
-    ranking_municipal[
+    mapa_municipios = (
+        carregar_municipios_local()
+    )
+
+    historico_municipal_exibir[
         "MUNICIPIO"
     ] = (
-        ranking_municipal[
+        historico_municipal_exibir[
             "CODMUNRES"
         ]
         .map(
@@ -823,29 +697,283 @@ with aba3:
         )
     )
 
-
-    # --------------------------------------------------------
-    # Arredondar somente a exibição
-    # --------------------------------------------------------
-
-    ranking_municipal[
-        "OBITOS_PREVISTOS"
+    projecoes_municipais_exibir[
+        "MUNICIPIO"
     ] = (
-        ranking_municipal[
+        projecoes_municipais_exibir[
+            "CODMUNRES"
+        ]
+        .map(
+            mapa_municipios
+        )
+        .fillna(
+            "Município não identificado"
+        )
+    )
+
+    # --------------------------------------------------------
+    # LISTA DE MUNICÍPIOS
+    # --------------------------------------------------------
+
+    municipios_disponiveis = (
+        pd.concat(
+            [
+                historico_municipal_exibir[
+                    [
+                        "CODMUNRES",
+                        "MUNICIPIO"
+                    ]
+                ],
+
+                projecoes_municipais_exibir[
+                    [
+                        "CODMUNRES",
+                        "MUNICIPIO"
+                    ]
+                ]
+            ]
+        )
+        .drop_duplicates(
+            subset=[
+                "CODMUNRES"
+            ]
+        )
+        .sort_values(
+            "MUNICIPIO"
+        )
+        .reset_index(
+            drop=True
+        )
+    )
+
+    municipios_disponiveis[
+        "OPCAO"
+    ] = (
+        municipios_disponiveis[
+            "MUNICIPIO"
+        ]
+        + " — "
+        + municipios_disponiveis[
+            "CODMUNRES"
+        ]
+    )
+
+    opcao_selecionada = (
+        st.selectbox(
+            "Selecione o município",
+            municipios_disponiveis[
+                "OPCAO"
+            ].tolist()
+        )
+    )
+
+    linha_selecionada = (
+        municipios_disponiveis[
+            municipios_disponiveis[
+                "OPCAO"
+            ]
+            == opcao_selecionada
+        ]
+        .iloc[0]
+    )
+
+    codigo_selecionado = (
+        linha_selecionada[
+            "CODMUNRES"
+        ]
+    )
+
+    nome_selecionado = (
+        linha_selecionada[
+            "MUNICIPIO"
+        ]
+    )
+
+    st.markdown(
+        f"Município selecionado: "
+        f"**{nome_selecionado} — "
+        f"{codigo_selecionado}**"
+    )
+
+    # --------------------------------------------------------
+    # FILTRAR HISTÓRICO
+    # --------------------------------------------------------
+
+    historico_selecionado = (
+        historico_municipal_exibir[
+            historico_municipal_exibir[
+                "CODMUNRES"
+            ]
+            == codigo_selecionado
+        ]
+        .copy()
+        .sort_values(
+            "ANO"
+        )
+    )
+
+    # --------------------------------------------------------
+    # FILTRAR PROJEÇÕES
+    # --------------------------------------------------------
+
+    projecao_selecionada = (
+        projecoes_municipais_exibir[
+            projecoes_municipais_exibir[
+                "CODMUNRES"
+            ]
+            == codigo_selecionado
+        ]
+        .copy()
+        .sort_values(
+            "ANO"
+        )
+    )
+
+    # --------------------------------------------------------
+    # GRÁFICO HISTÓRICO + PROJEÇÕES
+    # --------------------------------------------------------
+
+    fig_municipio = go.Figure()
+
+    if not historico_selecionado.empty:
+
+        fig_municipio.add_trace(
+            go.Scatter(
+                x=historico_selecionado[
+                    "ANO"
+                ],
+
+                y=historico_selecionado[
+                    "OBITOS"
+                ],
+
+                mode="lines+markers",
+
+                name="Histórico",
+
+                customdata=(
+                    historico_selecionado[
+                        "OBITOS"
+                    ]
+                ),
+
+                hovertemplate=(
+                    "Ano: %{x}<br>"
+                    "Óbitos históricos: "
+                    "%{customdata:.0f}"
+                    "<extra></extra>"
+                )
+            )
+        )
+
+    if not projecao_selecionada.empty:
+
+        fig_municipio.add_trace(
+            go.Scatter(
+                x=projecao_selecionada[
+                    "ANO"
+                ],
+
+                y=projecao_selecionada[
+                    "OBITOS_PREVISTOS"
+                ],
+
+                mode="lines+markers",
+
+                name="Projeção",
+
+                line=dict(
+                    dash="dash"
+                ),
+
+                customdata=(
+                    projecao_selecionada[
+                        "OBITOS_PREVISTOS"
+                    ]
+                ),
+
+                hovertemplate=(
+                    "Ano: %{x}<br>"
+                    "Óbitos previstos: "
+                    "%{customdata:.0f}"
+                    "<extra></extra>"
+                )
+            )
+        )
+
+    fig_municipio.update_layout(
+        title=(
+            "Histórico e projeção — "
+            f"{nome_selecionado}"
+        ),
+
+        xaxis_title="Ano",
+
+        yaxis_title="Óbitos",
+
+        hovermode="x unified"
+    )
+
+    st.plotly_chart(
+        fig_municipio,
+        use_container_width=True
+    )
+
+    # --------------------------------------------------------
+    # PROJEÇÕES MUNICIPAIS
+    # --------------------------------------------------------
+
+    st.subheader(
+        "Projeções municipais"
+    )
+
+    anos_projecao = sorted(
+        projecoes_municipais_exibir[
+            "ANO"
+        ].unique()
+    )
+
+    ano_selecionado = (
+        st.selectbox(
+            "Ano da projeção",
+            anos_projecao
+        )
+    )
+
+    ranking = (
+        projecoes_municipais_exibir[
+            projecoes_municipais_exibir[
+                "ANO"
+            ]
+            == ano_selecionado
+        ]
+        .copy()
+    )
+
+    ranking[
+        "OBITOS_EXIBICAO"
+    ] = (
+        ranking[
             "OBITOS_PREVISTOS"
         ]
-        .round(0)
+        .round()
         .astype(int)
     )
 
+    ranking = (
+        ranking.sort_values(
+            "OBITOS_PREVISTOS",
+            ascending=False
+        )
+    )
 
-    ranking_municipal = (
-        ranking_municipal[
+    ranking_exibir = (
+        ranking[
             [
                 "ANO",
                 "MUNICIPIO",
                 "CODMUNRES",
-                "OBITOS_PREVISTOS"
+                "OBITOS_EXIBICAO"
             ]
         ]
         .rename(
@@ -859,27 +987,25 @@ with aba3:
                 "CODMUNRES":
                     "Código do município",
 
-                "OBITOS_PREVISTOS":
+                "OBITOS_EXIBICAO":
                     "Óbitos previstos"
             }
         )
     )
 
-
     st.dataframe(
-        ranking_municipal,
+        ranking_exibir,
         use_container_width=True,
         hide_index=True
     )
 
-
     st.caption(
-        "Os valores municipais previstos são exibidos "
-        "arredondados para o número inteiro mais próximo. "
-        "Os valores originais produzidos pelo modelo "
+        "Os valores municipais previstos são "
+        "exibidos arredondados para o número "
+        "inteiro mais próximo. Os valores "
+        "originais produzidos pelo modelo "
         "permanecem preservados na base de dados."
     )
-
 # ============================================================
 # ABA 4 - MODELOS
 # ============================================================
